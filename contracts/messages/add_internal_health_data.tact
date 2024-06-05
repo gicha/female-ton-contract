@@ -1,0 +1,3 @@
+message AddInternalHealthData {
+    encryptedData: String;
+}
