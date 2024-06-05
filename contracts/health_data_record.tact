@@ -4,7 +4,7 @@ contract HealthDataRecord {
     /// address of the parent contract
     parent: Address;
     /// index of the menstruation's array
-    seqno: Int as uint256;   
+    seqno: Int as uint256;
     /// who encrypted that data and has access to it
     accessedAddress: Address;
     /// encrypted data by public key of the accessedAddress
@@ -26,4 +26,11 @@ contract HealthDataRecord {
         return self.accessedAddress;
     }
 
+    get fun encryptedData(): String {
+        return self.encryptedData;
+    }
+
+    get fun balance(): Int {
+        return myBalance();
+    }
 }

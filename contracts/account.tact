@@ -36,7 +36,7 @@ contract Account with Deployable, Ownable {
         send(SendParameters{
             to: contractAddress(init),
             body: AddInternalHealthData{encryptedData: msg.encryptedData}.toCell(),
-            value: ton("0.0001"),   // pay for the deployment and leave some TON in the child for storage
+            value: ton("0.007"),   // pay for the deployment and leave some TON in the child for storage
             mode: SendIgnoreErrors,
             code: init.code,    // prepare the initial code when deploying the child contract
             data: init.data
@@ -58,5 +58,9 @@ contract Account with Deployable, Ownable {
 
     get fun healthDataAddress(seqno: Int, accessedAddress: Address): Address {
         return contractAddress(initOf HealthDataRecord(myAddress(), seqno, accessedAddress));
+    }
+
+    get fun balance(): Int {
+        return myBalance();
     }
 }

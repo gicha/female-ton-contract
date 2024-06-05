@@ -1,6 +1,6 @@
+import { NetworkProvider } from '@ton/blueprint';
 import { toNano } from '@ton/core';
 import { Account } from '../wrappers/Account';
-import { NetworkProvider } from '@ton/blueprint';
 
 export async function run(provider: NetworkProvider) {
     const account = provider.open(await Account.fromInit());
@@ -8,7 +8,7 @@ export async function run(provider: NetworkProvider) {
     await account.send(
         provider.sender(),
         {
-            value: toNano('0.05'),
+            value: toNano('0.004'),
         },
         {
             $$type: 'Deploy',
