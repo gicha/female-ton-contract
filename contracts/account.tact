@@ -55,4 +55,8 @@ contract Account with Deployable, Ownable {
     get fun numAccesses(): Int {
         return self.numAccesses;
     }
+
+    get fun healthDataAddress(seqno: Int, accessedAddress: Address): Address {
+        return contractAddress(initOf HealthDataRecord(myAddress(), seqno, accessedAddress));
+    }
 }
