@@ -1,6 +1,9 @@
 import "@stdlib/deploy";
 import "@stdlib/ownable";
-import "./messages/new_account";
+import "./messages/add_health_data_response";
+import "./messages/add_health_data";
+import "./messages/add_internal_health_data";
+import "./messages/set_public_key";
 import "./health_data_record";
 
 contract Account with Deployable, Ownable {
@@ -20,7 +23,7 @@ contract Account with Deployable, Ownable {
     receive(msg: SetPublicKey) {
         require(context().sender == self.owner, "Invalid sender");
         self.publicKey = msg.publicKey;
-        self.reply();
+        self.reply("Public key updated".asComment());
     }
 
     receive(msg: AddHealthData) {
@@ -32,13 +35,12 @@ contract Account with Deployable, Ownable {
         );
         send(SendParameters{
             to: contractAddress(init),
-            body: InternalSetTask{task: msg.task}.toCell(),
+            body: AddInternalHealthData{encryptedData: msg.encryptedData}.toCell(),
             value: ton("0.0001"),   // pay for the deployment and leave some TON in the child for storage
             mode: SendIgnoreErrors,
             code: init.code,    // prepare the initial code when deploying the child contract
             data: init.data
         });
-        
         self.reply(AddHealthDataResponse{seqno: self.numHealthDataRecords}.toCell()); // this will return excess gas to sender
     }
 
