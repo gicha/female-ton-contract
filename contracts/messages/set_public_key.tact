@@ -1,0 +1,3 @@
+message SetPublicKey {
+    publicKey: String;
+}
