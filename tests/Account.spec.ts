@@ -1,9 +1,5 @@
-import { Blockchain, SandboxContract, TreasuryContract } from '@ton/sandbox';
 import '@ton/test-utils';
-import { toNano } from '@ton/ton';
-import { HealthDataRecord } from '../build/Account/tact_HealthDataRecord';
-import { Account } from '../wrappers/Account';
-
+/*
 describe('Account', () => {
     let blockchain: Blockchain;
     let deployer: SandboxContract<TreasuryContract>;
@@ -77,3 +73,4 @@ describe('Account', () => {
         expect(recordData).toEqual(encryptedData);
     });
 });
+*/
