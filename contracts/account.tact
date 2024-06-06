@@ -6,9 +6,11 @@ import "./messages/add_internal_health_data";
 import "./messages/set_public_key";
 import "./health_data_record";
 
-contract Account with Deployable, Ownable {
+contract Account with Ownable {
+    /// the owner of the contract
+    owner: Address;
     /// the owner of the account
-    owner: Address; 
+    accountOwner: Address;
     /// the public key of the account for encryption
     publicKey: String = "";
     /// the number of health data records
@@ -16,12 +18,13 @@ contract Account with Deployable, Ownable {
     /// the number of access's data
     numAccesses: Int as uint256 = 0;
 
-    init() {
+    init(accountOwner: Address) {
         self.owner = sender(); // set the owner as the deployer
+        self.accountOwner = accountOwner; // set the account owner
     }
 
     receive(msg: SetPublicKey) {
-        require(context().sender == self.owner, "Invalid sender");
+        require(context().sender == self.owner || context().sender == self.accountOwner, "Invalid sender");
         self.publicKey = msg.publicKey;
         self.reply("Public key updated".asComment());
     }
@@ -36,7 +39,7 @@ contract Account with Deployable, Ownable {
         send(SendParameters{
             to: contractAddress(init),
             body: AddInternalHealthData{encryptedData: msg.encryptedData}.toCell(),
-            value: ton("0.007"),   // pay for the deployment and leave some TON in the child for storage
+            value: ton("0.008"),   // pay for the deployment and leave some TON in the child for storage
             mode: SendIgnoreErrors,
             code: init.code,    // prepare the initial code when deploying the child contract
             data: init.data
