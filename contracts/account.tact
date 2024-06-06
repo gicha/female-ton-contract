@@ -10,7 +10,7 @@ contract Account with Deployable, Ownable {
     /// the owner of the contract
     owner: Address;
     /// the owner of the account
-    accountOwner: Address;
+    accountOwner: String;
     /// the public key of the account for encryption
     publicKey: String = "";
     /// the number of health data records
@@ -18,13 +18,13 @@ contract Account with Deployable, Ownable {
     /// the number of access's data
     numAccesses: Int as uint256 = 0;
 
-    init(accountOwner: Address) {
+    init(accountOwner: String) {
         self.owner = sender(); // set the owner as the deployer
         self.accountOwner = accountOwner; // set the account owner
     }
 
     receive(msg: SetPublicKey) {
-        require(context().sender == self.owner || context().sender == self.accountOwner, "Invalid sender");
+        require(context().sender == self.owner , "Invalid sender"); //|| context().sender == self.accountOwner
         self.publicKey = msg.publicKey;
         self.reply("Public key updated".asComment());
     }
