@@ -10,13 +10,28 @@ describe('Account', () => {
     let account: SandboxContract<Account>;
     let mockAccountOwner: SandboxContract<TreasuryContract>;
 
-
     beforeEach(async () => {
         blockchain = await Blockchain.create();
         deployer = await blockchain.treasury('deployer');
         mockAccountOwner = await blockchain.treasury('mockAccountOwner');
         account = blockchain.openContract(await Account.fromInit(mockAccountOwner.address));
+
+        const deployResult = await account.send(
+            deployer.getSender(),
+            { value: toNano('0.05') },
+            {
+                $$type: 'Deploy',
+                queryId: 0n,
+            }
+        );
+        expect(deployResult.transactions).toHaveTransaction({
+            from: deployer.address,
+            to: account.address,
+            deploy: true,
+            success: true,
+        });
     });
+
     it('should set public key', async () => {
         const deployerAddress = deployer.getSender();
         const publicKey = '0x' + 'A'.repeat(64);

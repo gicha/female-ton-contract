@@ -6,7 +6,7 @@ import "./messages/add_internal_health_data";
 import "./messages/set_public_key";
 import "./health_data_record";
 
-contract Account with Ownable {
+contract Account with Deployable, Ownable {
     /// the owner of the contract
     owner: Address;
     /// the owner of the account
