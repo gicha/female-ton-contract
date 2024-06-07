@@ -1,5 +1,9 @@
+import { Blockchain, SandboxContract, TreasuryContract } from '@ton/sandbox';
 import '@ton/test-utils';
-/*
+import { toNano } from '@ton/ton';
+import { HealthDataRecord } from '../build/Account/tact_HealthDataRecord';
+import { Account } from '../wrappers/Account';
+
 describe('Account', () => {
     let blockchain: Blockchain;
     let deployer: SandboxContract<TreasuryContract>;
@@ -10,7 +14,7 @@ describe('Account', () => {
         blockchain = await Blockchain.create();
         deployer = await blockchain.treasury('deployer');
         mockAccountOwner = await blockchain.treasury('mockAccountOwner');
-        account = blockchain.openContract(await Account.fromInit(mockAccountOwner.address));
+        account = blockchain.openContract(await Account.fromInit(mockAccountOwner.address.toString()));
 
         const deployResult = await account.send(
             deployer.getSender(),
@@ -73,4 +77,3 @@ describe('Account', () => {
         expect(recordData).toEqual(encryptedData);
     });
 });
-*/
