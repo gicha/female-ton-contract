@@ -6,6 +6,7 @@ import "./messages/add_internal_health_data";
 import "./messages/set_public_key";
 import "./messages/set_inactive";
 import "./messages/set_inactive_internal";
+import "./messages/change_health_data";
 import "./health_data_record";
 
 
@@ -27,12 +28,13 @@ contract Account with Deployable, Ownable {
     }
 
     receive(msg: SetPublicKey) {
-        require(context().sender == self.owner, "Invalid sender"); //|| context().sender == self.accountOwner
+        self.requireOwner(); //|| context().sender == self.accountOwner
         self.publicKey = msg.publicKey;
         self.reply("Public key updated".asComment());
     }
 
     receive(msg: AddHealthData) {
+        self.requireOwner();
         self.numHealthDataRecords = self.numHealthDataRecords + 1;
         let init: StateInit = initOf HealthDataRecord(
             myAddress(),
@@ -51,6 +53,27 @@ contract Account with Deployable, Ownable {
             data: init.data
         });
         self.reply(AddHealthDataResponse{seqno: self.numHealthDataRecords}.toCell()); // this will return excess gas to sender
+    }
+
+    receive(msg: ChangeHealthData) {    
+        self.requireOwner();
+        let init: StateInit = initOf HealthDataRecord(
+            myAddress(),
+            msg.seqno,
+            msg.accessedAddress
+        );
+        send(SendParameters{
+            to: contractAddress(init),
+            body: AddInternalHealthData{
+                    encryptedPeriodDateStart: msg.encryptedPeriodDateStart,
+                    encryptedPeriodDateEnd: msg.encryptedPeriodDateEnd,
+                }.toCell(),
+            value: ton("0.008"),   // pay for the deployment and leave some TON in the child for storage
+            mode: SendIgnoreErrors,
+            code: init.code,   // prepare the initial code when deploying the child contract
+            data: init.data
+        });
+        self.reply("Data updated".asComment());
     }
 
     receive(msg: SetInactiveRecord) {

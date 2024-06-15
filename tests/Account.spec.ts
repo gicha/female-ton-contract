@@ -95,4 +95,75 @@ describe('Account', () => {
         const inactiveRecordState = await record.getHealthDataState();
         expect(inactiveRecordState.recordIsActive).toEqual(false);
     });
+    it('should change health data', async () => {
+        const deployerAddress = deployer.getSender();
+        const encryptedPeriodDateStart = 'dateStart';
+        const encryptedPeriodDateEnd = 'dateEnd';
+        await account.send(
+            deployerAddress,
+            { value: toNano('0.02') },
+            {
+                $$type: 'AddHealthData',
+                accessedAddress: mockAccountOwner.address,
+                encryptedPeriodDateStart: encryptedPeriodDateStart,
+                encryptedPeriodDateEnd: encryptedPeriodDateEnd,
+            },
+        );
+        const recordAddress = await account.getHealthDataAddress(1n, mockAccountOwner.address);
+        const record = blockchain.openContract(HealthDataRecord.fromAddress(recordAddress));
+        const newEncryptedPeriodDateStart = 'changedDateStart';
+        const newEncryptedPeriodDateEnd = 'changedDateEnd';
+        const updatedResult = await account.send(
+            deployerAddress,
+            { value: toNano('0.02') },
+            {
+                $$type: 'ChangeHealthData',
+                accessedAddress: mockAccountOwner.address,
+                seqno: 1n,
+                encryptedPeriodDateStart: newEncryptedPeriodDateStart,
+                encryptedPeriodDateEnd: newEncryptedPeriodDateEnd,
+            },
+        );
+        expect(updatedResult.transactions).toHaveTransaction({
+            from: account.address,
+            to: recordAddress,
+            success: true,
+        });
+        const inactiveRecordState = await record.getHealthDataState();
+        expect(inactiveRecordState.encryptedPeriodDateStart).toEqual(newEncryptedPeriodDateStart);
+        expect(inactiveRecordState.encryptedPeriodDateEnd).toEqual(newEncryptedPeriodDateEnd);
+    });
+    it('should inactivate health data', async () => {
+        const deployerAddress = deployer.getSender();
+        const encryptedPeriodDateStart = 'dateStart';
+        const encryptedPeriodDateEnd = 'dateEnd';
+        await account.send(
+            deployerAddress,
+            { value: toNano('0.02') },
+            {
+                $$type: 'AddHealthData',
+                accessedAddress: mockAccountOwner.address,
+                encryptedPeriodDateStart: encryptedPeriodDateStart,
+                encryptedPeriodDateEnd: encryptedPeriodDateEnd,
+            },
+        );
+        const recordAddress = await account.getHealthDataAddress(1n, mockAccountOwner.address);
+        const record = blockchain.openContract(HealthDataRecord.fromAddress(recordAddress));
+        const inactiveResult = await account.send(
+            deployerAddress,
+            { value: toNano('0.02') },
+            {
+                $$type: 'SetInactiveRecord',
+                accessedAddress: mockAccountOwner.address,
+                seqno: 1n,
+            },
+        );
+        expect(inactiveResult.transactions).toHaveTransaction({
+            from: account.address,
+            to: recordAddress,
+            success: true,
+        });
+        const inactiveRecordState = await record.getHealthDataState();
+        expect(inactiveRecordState.recordIsActive).toEqual(false);
+    });
 });
