@@ -50,14 +50,16 @@ describe('Account', () => {
     });
     it('should add health data', async () => {
         const deployerAddress = deployer.getSender();
-        const encryptedData = 'test data';
+        const encryptedPeriodDateStart = 'dateStart';
+        const encryptedPeriodDateEnd = 'dateEnd';
         const deployResult = await account.send(
             deployerAddress,
             { value: toNano('0.02') },
             {
                 $$type: 'AddHealthData',
                 accessedAddress: mockAccountOwner.address,
-                encryptedData: encryptedData,
+                encryptedPeriodDateStart: encryptedPeriodDateStart,
+                encryptedPeriodDateEnd: encryptedPeriodDateEnd,
             },
         );
         const recordsCountAfter = await account.getNumHealthDataRecords();
@@ -69,11 +71,28 @@ describe('Account', () => {
             to: recordAddress,
             success: true,
         });
-
         const record = blockchain.openContract(HealthDataRecord.fromAddress(recordAddress));
         const accessedAddress = await record.getAccessedAddress();
-        const recordData = await record.getEncryptedData();
+        const recordState = await record.getHealthDataState();
         expect(accessedAddress.toString()).toEqual(mockAccountOwner.address.toString());
-        expect(recordData).toEqual(encryptedData);
+        expect(recordState.encryptedPeriodDateStart).toEqual(encryptedPeriodDateStart);
+        expect(recordState.encryptedPeriodDateEnd).toEqual(encryptedPeriodDateEnd);
+        expect(recordState.recordIsActive).toEqual(true);
+        const inactiveResult = await account.send(
+            deployerAddress,
+            { value: toNano('0.02') },
+            {
+                $$type: 'SetInactiveRecord',
+                accessedAddress: mockAccountOwner.address,
+                seqno: 1n,
+            },
+        );
+        expect(inactiveResult.transactions).toHaveTransaction({
+            from: account.address,
+            to: recordAddress,
+            success: true,
+        });
+        const inactiveRecordState = await record.getHealthDataState();
+        expect(inactiveRecordState.recordIsActive).toEqual(false);
     });
 });

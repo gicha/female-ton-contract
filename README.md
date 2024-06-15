@@ -40,3 +40,21 @@ To use this contract, you first need to deploy the Account contract. Then, you c
 ## Conclusion
 
 This Health Data Record contract provides a secure and efficient way to manage health data records on the TON blockchain.
+
+## How to work with BluePrint
+
+### Build
+
+`npx blueprint build` or `yarn blueprint build`
+
+### Test
+
+`npx blueprint test` or `yarn blueprint test`
+
+### Deploy or run another script
+
+`npx blueprint run` or `yarn blueprint run`
+
+### Add a new contract
+
+`npx blueprint create ContractName` or `yarn blueprint create ContractName`

@@ -4,7 +4,10 @@ import "./messages/add_health_data_response";
 import "./messages/add_health_data";
 import "./messages/add_internal_health_data";
 import "./messages/set_public_key";
+import "./messages/set_inactive";
+import "./messages/set_inactive_internal";
 import "./health_data_record";
+
 
 contract Account with Deployable, Ownable {
     /// the owner of the contract
@@ -24,7 +27,7 @@ contract Account with Deployable, Ownable {
     }
 
     receive(msg: SetPublicKey) {
-        require(context().sender == self.owner , "Invalid sender"); //|| context().sender == self.accountOwner
+        require(context().sender == self.owner, "Invalid sender"); //|| context().sender == self.accountOwner
         self.publicKey = msg.publicKey;
         self.reply("Public key updated".asComment());
     }
@@ -38,13 +41,32 @@ contract Account with Deployable, Ownable {
         );
         send(SendParameters{
             to: contractAddress(init),
-            body: AddInternalHealthData{encryptedData: msg.encryptedData}.toCell(),
+            body: AddInternalHealthData{
+                    encryptedPeriodDateStart: msg.encryptedPeriodDateStart,
+                    encryptedPeriodDateEnd: msg.encryptedPeriodDateEnd,
+                }.toCell(),
             value: ton("0.008"),   // pay for the deployment and leave some TON in the child for storage
             mode: SendIgnoreErrors,
             code: init.code,    // prepare the initial code when deploying the child contract
             data: init.data
         });
         self.reply(AddHealthDataResponse{seqno: self.numHealthDataRecords}.toCell()); // this will return excess gas to sender
+    }
+
+    receive(msg: SetInactiveRecord) {
+        self.requireOwner();
+        require(msg.seqno <= self.numHealthDataRecords, "Record does not exist");
+        let init: StateInit = initOf HealthDataRecord(
+            myAddress(),
+            self.numHealthDataRecords,
+            msg.accessedAddress
+        );
+        send(SendParameters{
+            to: contractAddress(init),
+            body: SetInactiveRecordInternal{excess: sender()}.toCell(),
+            value: 0,
+            mode: SendRemainingValue + SendIgnoreErrors
+        });
     }
 
     get fun publicKey(): String {

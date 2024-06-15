@@ -1,0 +1,3 @@
+message SetInactiveRecordInternal {
+    excess: Address;
+}
