@@ -1,0 +1,3 @@
+struct PeriodDataItem {
+    date: String = "";
+}

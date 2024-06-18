@@ -1,13 +1,10 @@
 import "@stdlib/deploy";
 import "@stdlib/ownable";
-import "./messages/add_health_data_response";
-import "./messages/add_health_data";
-import "./messages/add_internal_health_data";
+import "./messages/update_month_period_data_response";
+import "./messages/update_month_period_data";
+import "./messages/internal_update_month_period_data";
 import "./messages/set_public_key";
-import "./messages/set_inactive";
-import "./messages/set_inactive_internal";
-import "./messages/change_health_data";
-import "./health_data_record";
+import "./month_period_data";
 
 
 contract Account with Deployable, Ownable {
@@ -17,9 +14,11 @@ contract Account with Deployable, Ownable {
     accountOwner: String;
     /// the public key of the account for encryption
     publicKey: String = "";
-    /// the number of health data records
-    numHealthDataRecords: Int as uint256 = 0;
-    /// the number of access's data
+    /// 
+    numFilledMonthes: Int as uint256 = 0;
+    /// {seqno: monthIndex}
+    filledMonthes: map<Int, Int>;
+    /// the number of access's data. This is for future logic with the access control
     numAccesses: Int as uint256 = 0;
 
     init(accountOwner: String) {
@@ -33,82 +32,65 @@ contract Account with Deployable, Ownable {
         self.reply("Public key updated".asComment());
     }
 
-    receive(msg: AddHealthData) {
-        self.requireOwner();
-        self.numHealthDataRecords = self.numHealthDataRecords + 1;
-        let init: StateInit = initOf HealthDataRecord(
+    receive(msg: UpdateMonthPeriodData) {
+        self.requireOwner(); //|| context().sender == self.accountOwner
+        let recordSeqno: Int = -1;
+        let i : Int = 0;
+        repeat (self.numFilledMonthes) {
+            if (self.filledMonthes.get(i) == msg.monthIndex) {
+                recordSeqno = i;
+            }
+            i = i + 1;
+        }
+        if (recordSeqno == -1) {
+            recordSeqno = self.numFilledMonthes;
+            self.filledMonthes.set(recordSeqno, msg.monthIndex);
+            self.numFilledMonthes = self.numFilledMonthes + 1;
+        }
+        
+        let init: StateInit = initOf MonthPeriodData(
             myAddress(),
-            self.numHealthDataRecords,
+            recordSeqno,
             msg.accessedAddress
         );
         send(SendParameters{
             to: contractAddress(init),
-            body: AddInternalHealthData{
-                    encryptedPeriodDateStart: msg.encryptedPeriodDateStart,
-                    encryptedPeriodDateEnd: msg.encryptedPeriodDateEnd,
+            body: InternalUpdateMonthPeriodData{
+                    toAdd: msg.toAdd,
+                    toDelete: msg.toDelete,
                 }.toCell(),
-            value: ton("0.008"),   // pay for the deployment and leave some TON in the child for storage
+            value: ton("0.008"),
             mode: SendIgnoreErrors,
-            code: init.code,    // prepare the initial code when deploying the child contract
+            code: init.code,
             data: init.data
         });
-        self.reply(AddHealthDataResponse{seqno: self.numHealthDataRecords}.toCell()); // this will return excess gas to sender
-    }
-
-    receive(msg: ChangeHealthData) {    
-        self.requireOwner();
-        let init: StateInit = initOf HealthDataRecord(
-            myAddress(),
-            msg.seqno,
-            msg.accessedAddress
-        );
-        send(SendParameters{
-            to: contractAddress(init),
-            body: AddInternalHealthData{
-                    encryptedPeriodDateStart: msg.encryptedPeriodDateStart,
-                    encryptedPeriodDateEnd: msg.encryptedPeriodDateEnd,
-                }.toCell(),
-            value: ton("0.008"),   // pay for the deployment and leave some TON in the child for storage
-            mode: SendIgnoreErrors,
-            code: init.code,   // prepare the initial code when deploying the child contract
-            data: init.data
-        });
-        self.reply("Data updated".asComment());
-    }
-
-    receive(msg: SetInactiveRecord) {
-        self.requireOwner();
-        require(msg.seqno <= self.numHealthDataRecords, "Record does not exist");
-        let init: StateInit = initOf HealthDataRecord(
-            myAddress(),
-            self.numHealthDataRecords,
-            msg.accessedAddress
-        );
-        send(SendParameters{
-            to: contractAddress(init),
-            body: SetInactiveRecordInternal{excess: sender()}.toCell(),
-            value: 0,
-            mode: SendRemainingValue + SendIgnoreErrors
-        });
+        self.reply(UpdateMonthPeriodDataResponse{seqno: recordSeqno}.toCell());
     }
 
     get fun publicKey(): String {
         return self.publicKey;
     }
 
-    get fun numHealthDataRecords(): Int {
-        return self.numHealthDataRecords;
+    get fun numFilledMonthes(): Int {
+        return self.numFilledMonthes;
     }
 
     get fun numAccesses(): Int {
         return self.numAccesses;
     }
 
-    get fun healthDataAddress(seqno: Int, accessedAddress: Address): Address {
-        return contractAddress(initOf HealthDataRecord(myAddress(), seqno, accessedAddress));
+    get fun monthPeriodDataAddress(seqno: Int, accessedAddress: Address): Address {
+        return contractAddress(
+            initOf MonthPeriodData(
+                myAddress(),
+                seqno,
+                accessedAddress
+            )
+        );
     }
 
     get fun balance(): Int {
         return myBalance();
     }
+
 }
