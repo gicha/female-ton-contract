@@ -28,8 +28,8 @@ contract MonthPeriodData {
         }
         require(self.dataArrLength < self.MaxSize, "Data array is full");
         if (self.dataArrLength < self.MaxSize) {
-            self.data.set(self.dataArrLength, item);
             self.dataArrLength = self.dataArrLength + 1;
+            self.data.set(self.dataArrLength, item);
         }
     }
 
@@ -39,25 +39,24 @@ contract MonthPeriodData {
             return;
         }
         let i: Int = itemIndex;
-        while (i < self.dataArrLength - 1) {
+        while (i <= self.dataArrLength - 1) {
             let next: PeriodDataItem? = self.data.get(i + 1);
             self.data.set(i, next);
             i = i + 1;
         }
-        self.data.set(self.dataArrLength - 1, null);
+        self.data.set(self.dataArrLength, null);
         self.dataArrLength = self.dataArrLength - 1;
     }
 
     fun indexOf(item: PeriodDataItem) : Int {
-        let i: Int = 0;
-        while (i < self.dataArrLength) {
+        let i: Int = 1;
+        while (i <= self.dataArrLength) {
             let arrItem: PeriodDataItem? = self.data.get(i);
             if (arrItem != null) {
                 if (arrItem!!.date == item.date) {
                     return i;
                 }
             }
-            
             i = i + 1;
         }
         return -1;
@@ -65,12 +64,12 @@ contract MonthPeriodData {
 
     receive(msg: InternalUpdateMonthPeriodData) {
         require(sender() == self.parent, "Parent only");
-        let i: Int = 0;
+        let i: Int = 1;
         while (msg.toDelete.get(i) != null) {
             self.arrRemove(msg.toDelete.get(i)!!);
             i = i + 1;
         }
-        i = 0;
+        i = 1;
         while (msg.toAdd.get(i) != null) {
             self.arrPush(msg.toAdd.get(i)!!);
             i = i + 1;

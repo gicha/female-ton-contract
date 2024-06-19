@@ -15,9 +15,9 @@ contract Account with Deployable, Ownable {
     /// the public key of the account for encryption
     publicKey: String = "";
     /// 
-    numFilledMonthes: Int as uint256 = 0;
+    numFilledMonths: Int as uint256 = 0;
     /// {seqno: monthIndex}
-    filledMonthes: map<Int, Int>;
+    filledMonths: map<Int, Int>;
     /// the number of access's data. This is for future logic with the access control
     numAccesses: Int as uint256 = 0;
 
@@ -35,19 +35,18 @@ contract Account with Deployable, Ownable {
     receive(msg: UpdateMonthPeriodData) {
         self.requireOwner(); //|| context().sender == self.accountOwner
         let recordSeqno: Int = -1;
-        let i : Int = 0;
-        repeat (self.numFilledMonthes) {
-            if (self.filledMonthes.get(i) == msg.monthIndex) {
+        let i : Int = 1;
+        repeat (self.numFilledMonths) {
+            if (self.filledMonths.get(i) == msg.monthIndex) {
                 recordSeqno = i;
             }
             i = i + 1;
         }
         if (recordSeqno == -1) {
-            recordSeqno = self.numFilledMonthes;
-            self.filledMonthes.set(recordSeqno, msg.monthIndex);
-            self.numFilledMonthes = self.numFilledMonthes + 1;
+            self.numFilledMonths = self.numFilledMonths + 1;
+            recordSeqno = self.numFilledMonths;
+            self.filledMonths.set(recordSeqno, msg.monthIndex);
         }
-        
         let init: StateInit = initOf MonthPeriodData(
             myAddress(),
             recordSeqno,
@@ -59,7 +58,7 @@ contract Account with Deployable, Ownable {
                     toAdd: msg.toAdd,
                     toDelete: msg.toDelete,
                 }.toCell(),
-            value: ton("0.008"),
+            value: ton("0.1"),
             mode: SendIgnoreErrors,
             code: init.code,
             data: init.data
@@ -71,8 +70,8 @@ contract Account with Deployable, Ownable {
         return self.publicKey;
     }
 
-    get fun numFilledMonthes(): Int {
-        return self.numFilledMonthes;
+    get fun numFilledMonths(): Int {
+        return self.numFilledMonths;
     }
 
     get fun numAccesses(): Int {
