@@ -72,7 +72,7 @@ describe('Account', () => {
         /// Run logic
         const deployResult = await account.send(
             deployerAddress,
-            { value: toNano('0.5') },
+            { value: toNano('0.03') },
             {
                 $$type: 'UpdateMonthPeriodData',
                 accessedAddress: mockAccountOwner.address,
@@ -152,7 +152,7 @@ describe('Account', () => {
         /// Run logic
         await account.send(
             deployerAddress,
-            { value: toNano('0.5') },
+            { value: toNano('0.03') },
             {
                 $$type: 'UpdateMonthPeriodData',
                 accessedAddress: mockAccountOwner.address,
@@ -163,7 +163,7 @@ describe('Account', () => {
         );
         await account.send(
             deployerAddress,
-            { value: toNano('0.5') },
+            { value: toNano('0.03') },
             {
                 $$type: 'UpdateMonthPeriodData',
                 accessedAddress: mockAccountOwner.address,
@@ -217,7 +217,7 @@ describe('Account', () => {
         /// Run logic
         await account.send(
             deployerAddress,
-            { value: toNano('0.5') },
+            { value: toNano('0.03') },
             {
                 $$type: 'UpdateMonthPeriodData',
                 accessedAddress: mockAccountOwner.address,
@@ -228,7 +228,7 @@ describe('Account', () => {
         );
         await account.send(
             deployerAddress,
-            { value: toNano('0.5') },
+            { value: toNano('0.03') },
             {
                 $$type: 'UpdateMonthPeriodData',
                 accessedAddress: mockAccountOwner.address,
@@ -252,7 +252,6 @@ describe('Account', () => {
         const data2 = await monthPeriod2.getData();
         expect(monthPeriodDataCount2).toEqual(BigInt(expectedMap2.size));
         expect(data2.get(BigInt(1))?.date).toEqual(expectedMap2.get(BigInt(1))?.date);
-
     });
 
 });

@@ -58,7 +58,7 @@ contract Account with Deployable, Ownable {
                     toAdd: msg.toAdd,
                     toDelete: msg.toDelete,
                 }.toCell(),
-            value: ton("0.1"),
+            value: ton("0.02"),
             mode: SendIgnoreErrors,
             code: init.code,
             data: init.data
