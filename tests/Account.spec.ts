@@ -18,7 +18,7 @@ describe('Account', () => {
 
         const deployResult = await account.send(
             deployer.getSender(),
-            { value: toNano('0.05') },
+            { value: toNano('0.008') },
             {
                 $$type: 'Deploy',
                 queryId: 0n,
@@ -37,16 +37,11 @@ describe('Account', () => {
         const publicKey = '0x' + 'A'.repeat(64);
         await account.send(
             deployerAddress,
-            { value: toNano('0.005') },
+            { value: toNano('0.008') },
             { $$type: 'SetPublicKey', publicKey: publicKey },
         );
         const publicKeyResult = await account.getPublicKey();
         expect(publicKeyResult).toEqual(publicKey);
-        await account.send(
-            deployerAddress,
-            { value: toNano('0.005') },
-            { $$type: 'SetPublicKey', publicKey: publicKey },
-        );
     });
     it('should add 2 period data items', async () => {
         const deployerAddress = deployer.getSender();
@@ -57,14 +52,14 @@ describe('Account', () => {
             1n,
             {
                 $$type: 'PeriodDataItem',
-                date: '2021-01-01',
+                date: new Date(Date.parse('2021-01-01')).toISOString(),
             }
         );
         toAdd.set(
             2n,
             {
                 $$type: 'PeriodDataItem',
-                date: '2021-01-02',
+                date: new Date(Date.parse('2021-01-02')).toISOString(),
             }
         );
         const toDelete = Dictionary.empty<bigint, PeriodDataItem>();
@@ -101,6 +96,74 @@ describe('Account', () => {
             expect(item?.date).toEqual(expectedItem?.date);
         }
     });
+    it('should add 2 and remove 1 period data items', async () => {
+        const deployerAddress = deployer.getSender();
+        /// Set data
+        const monthIndex = BigInt(1);
+        const toAddStep1 = Dictionary.empty<bigint, PeriodDataItem>();
+        toAddStep1.set(
+            1n,
+            {
+                $$type: 'PeriodDataItem',
+                date: new Date(Date.parse('2021-01-01')).toISOString(),
+            }
+        );
+        toAddStep1.set(
+            2n,
+            {
+                $$type: 'PeriodDataItem',
+                date: new Date(Date.parse('2021-01-02')).toISOString(),
+            }
+        );
+        const toDeleteStep1 = Dictionary.empty<bigint, PeriodDataItem>();
+        const toDeleteStep2 = Dictionary.empty<bigint, PeriodDataItem>();
+        toDeleteStep2.set(
+            1n,
+            {
+                $$type: 'PeriodDataItem',
+                date: new Date(Date.parse('2021-01-01')).toISOString(),
+            }
+        );
+        const toAddStep2 = Dictionary.empty<bigint, PeriodDataItem>();
+        const expectedMap = Dictionary.empty<bigint, PeriodDataItem>();
+        expectedMap.set(1n, toAddStep1.get(2n)!);
+
+        /// Run logic
+        await account.send(
+            deployerAddress,
+            { value: toNano('0.03') },
+            {
+                $$type: 'UpdateMonthPeriodData',
+                accessedAddress: mockAccountOwner.address,
+                monthIndex: monthIndex,
+                toAdd: toAddStep1,
+                toDelete: toDeleteStep1,
+            },
+        );
+        await account.send(
+            deployerAddress,
+            { value: toNano('0.03') },
+            {
+                $$type: 'UpdateMonthPeriodData',
+                accessedAddress: mockAccountOwner.address,
+                monthIndex: monthIndex,
+                toAdd: toAddStep2,
+                toDelete: toDeleteStep2,
+            },
+        );
+        const filledMonthsCount = await account.getNumFilledMonths();
+        expect(filledMonthsCount).toEqual(1n);
+        const monthPeriodAddress = await account.getMonthPeriodDataAddress(1n, mockAccountOwner.address);
+        const monthPeriod = blockchain.openContract(MonthPeriodData.fromAddress(monthPeriodAddress));
+        const monthPeriodDataCount = await monthPeriod.getDataLength();
+        const data = await monthPeriod.getData();
+        expect(monthPeriodDataCount).toEqual(BigInt(expectedMap.size));
+        for (let i = 0; i < expectedMap.size; i++) {
+            const expectedItem = expectedMap.get(BigInt(i));
+            const item = data.get(BigInt(i));
+            expect(item?.date).toEqual(expectedItem?.date);
+        }
+    });
     it('should add 2 -> add 2 and remove 1 period data items', async () => {
         const deployerAddress = deployer.getSender();
         /// Set data
@@ -110,14 +173,14 @@ describe('Account', () => {
             1n,
             {
                 $$type: 'PeriodDataItem',
-                date: '2021-01-01',
+                date: new Date(Date.parse('2021-01-01')).toISOString(),
             }
         );
         toAddStep1.set(
             2n,
             {
                 $$type: 'PeriodDataItem',
-                date: '2021-01-02',
+                date: new Date(Date.parse('2021-01-02')).toISOString(),
             }
         );
         const toDeleteStep1 = Dictionary.empty<bigint, PeriodDataItem>();
@@ -126,7 +189,7 @@ describe('Account', () => {
             1n,
             {
                 $$type: 'PeriodDataItem',
-                date: '2021-01-01',
+                date: new Date(Date.parse('2021-01-01')).toISOString(),
             }
         );
         const toAddStep2 = Dictionary.empty<bigint, PeriodDataItem>();
@@ -134,14 +197,14 @@ describe('Account', () => {
             1n,
             {
                 $$type: 'PeriodDataItem',
-                date: '2021-01-03',
+                date: new Date(Date.parse('2021-01-03')).toISOString(),
             }
         );
         toAddStep2.set(
             2n,
             {
                 $$type: 'PeriodDataItem',
-                date: '2021-01-04',
+                date: new Date(Date.parse('2021-01-04')).toISOString(),
             }
         );
         const expectedMap = Dictionary.empty<bigint, PeriodDataItem>();
@@ -195,7 +258,7 @@ describe('Account', () => {
             1n,
             {
                 $$type: 'PeriodDataItem',
-                date: '2021-01-01',
+                date: new Date(Date.parse('2021-01-01')).toISOString(),
             }
         );
         const toDelete1 = Dictionary.empty<bigint, PeriodDataItem>();
@@ -205,7 +268,7 @@ describe('Account', () => {
             1n,
             {
                 $$type: 'PeriodDataItem',
-                date: '2021-02-01',
+                date: new Date(Date.parse('2021-02-01')).toISOString(),
             }
         );
         const toDelete2 = Dictionary.empty<bigint, PeriodDataItem>();
