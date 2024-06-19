@@ -1,8 +1,8 @@
 import { Blockchain, SandboxContract, TreasuryContract } from '@ton/sandbox';
 import '@ton/test-utils';
-import { toNano } from '@ton/ton';
-import { HealthDataRecord } from '../build/Account/tact_HealthDataRecord';
-import { Account } from '../wrappers/Account';
+import { Dictionary, toNano } from '@ton/ton';
+import { MonthPeriodData } from '../build/Account/tact_MonthPeriodData';
+import { Account, PeriodDataItem } from '../wrappers/Account';
 
 describe('Account', () => {
     let blockchain: Blockchain;
@@ -48,122 +48,211 @@ describe('Account', () => {
             { $$type: 'SetPublicKey', publicKey: publicKey },
         );
     });
-    it('should add health data', async () => {
+    it('should add 2 period data items', async () => {
         const deployerAddress = deployer.getSender();
-        const encryptedPeriodDateStart = 'dateStart';
-        const encryptedPeriodDateEnd = 'dateEnd';
+        /// Set data
+        const monthIndex = BigInt(1);
+        const toAdd = Dictionary.empty<bigint, PeriodDataItem>();
+        toAdd.set(
+            1n,
+            {
+                $$type: 'PeriodDataItem',
+                date: '2021-01-01',
+            }
+        );
+        toAdd.set(
+            2n,
+            {
+                $$type: 'PeriodDataItem',
+                date: '2021-01-02',
+            }
+        );
+        const toDelete = Dictionary.empty<bigint, PeriodDataItem>();
+        const expectedMap = toAdd;
+        /// Run logic
         const deployResult = await account.send(
             deployerAddress,
-            { value: toNano('0.02') },
+            { value: toNano('0.5') },
             {
-                $$type: 'AddHealthData',
+                $$type: 'UpdateMonthPeriodData',
                 accessedAddress: mockAccountOwner.address,
-                encryptedPeriodDateStart: encryptedPeriodDateStart,
-                encryptedPeriodDateEnd: encryptedPeriodDateEnd,
+                monthIndex: monthIndex,
+                toAdd: toAdd,
+                toDelete: toDelete,
             },
         );
-        const recordsCountAfter = await account.getNumHealthDataRecords();
-        expect(recordsCountAfter).toEqual(1n);
-        const recordAddress = await account.getHealthDataAddress(1n, mockAccountOwner.address);
-
+        const filledMonthsCount = await account.getNumFilledMonths();
+        expect(filledMonthsCount).toEqual(1n);
+        const monthPeriodAddress = await account.getMonthPeriodDataAddress(1n, mockAccountOwner.address);
         expect(deployResult.transactions).toHaveTransaction({
             from: account.address,
-            to: recordAddress,
+            to: monthPeriodAddress,
             success: true,
         });
-        const record = blockchain.openContract(HealthDataRecord.fromAddress(recordAddress));
-        const accessedAddress = await record.getAccessedAddress();
-        const recordState = await record.getHealthDataState();
+        const monthPeriod = blockchain.openContract(MonthPeriodData.fromAddress(monthPeriodAddress));
+        const accessedAddress = await monthPeriod.getAccessedAddress();
+        const monthPeriodDataCount = await monthPeriod.getDataLength();
+        const data = await monthPeriod.getData();
         expect(accessedAddress.toString()).toEqual(mockAccountOwner.address.toString());
-        expect(recordState.encryptedPeriodDateStart).toEqual(encryptedPeriodDateStart);
-        expect(recordState.encryptedPeriodDateEnd).toEqual(encryptedPeriodDateEnd);
-        expect(recordState.recordIsActive).toEqual(true);
-        const inactiveResult = await account.send(
-            deployerAddress,
-            { value: toNano('0.02') },
-            {
-                $$type: 'SetInactiveRecord',
-                accessedAddress: mockAccountOwner.address,
-                seqno: 1n,
-            },
-        );
-        expect(inactiveResult.transactions).toHaveTransaction({
-            from: account.address,
-            to: recordAddress,
-            success: true,
-        });
-        const inactiveRecordState = await record.getHealthDataState();
-        expect(inactiveRecordState.recordIsActive).toEqual(false);
+        expect(monthPeriodDataCount).toEqual(BigInt(expectedMap.size));
+        for (let i = 0; i < expectedMap.size; i++) {
+            const expectedItem = expectedMap.get(BigInt(i));
+            const item = data.get(BigInt(i));
+            expect(item?.date).toEqual(expectedItem?.date);
+        }
     });
-    it('should change health data', async () => {
+    it('should add 2 -> add 2 and remove 1 period data items', async () => {
         const deployerAddress = deployer.getSender();
-        const encryptedPeriodDateStart = 'dateStart';
-        const encryptedPeriodDateEnd = 'dateEnd';
+        /// Set data
+        const monthIndex = BigInt(1);
+        const toAddStep1 = Dictionary.empty<bigint, PeriodDataItem>();
+        toAddStep1.set(
+            1n,
+            {
+                $$type: 'PeriodDataItem',
+                date: '2021-01-01',
+            }
+        );
+        toAddStep1.set(
+            2n,
+            {
+                $$type: 'PeriodDataItem',
+                date: '2021-01-02',
+            }
+        );
+        const toDeleteStep1 = Dictionary.empty<bigint, PeriodDataItem>();
+        const toDeleteStep2 = Dictionary.empty<bigint, PeriodDataItem>();
+        toDeleteStep2.set(
+            1n,
+            {
+                $$type: 'PeriodDataItem',
+                date: '2021-01-01',
+            }
+        );
+        const toAddStep2 = Dictionary.empty<bigint, PeriodDataItem>();
+        toAddStep2.set(
+            1n,
+            {
+                $$type: 'PeriodDataItem',
+                date: '2021-01-03',
+            }
+        );
+        toAddStep2.set(
+            2n,
+            {
+                $$type: 'PeriodDataItem',
+                date: '2021-01-04',
+            }
+        );
+        const expectedMap = Dictionary.empty<bigint, PeriodDataItem>();
+        expectedMap.set(1n, toAddStep1.get(2n)!);
+        expectedMap.set(2n, toAddStep2.get(1n)!);
+        expectedMap.set(3n, toAddStep2.get(2n)!);
+
+        /// Run logic
         await account.send(
             deployerAddress,
-            { value: toNano('0.02') },
+            { value: toNano('0.5') },
             {
-                $$type: 'AddHealthData',
+                $$type: 'UpdateMonthPeriodData',
                 accessedAddress: mockAccountOwner.address,
-                encryptedPeriodDateStart: encryptedPeriodDateStart,
-                encryptedPeriodDateEnd: encryptedPeriodDateEnd,
+                monthIndex: monthIndex,
+                toAdd: toAddStep1,
+                toDelete: toDeleteStep1,
             },
         );
-        const recordAddress = await account.getHealthDataAddress(1n, mockAccountOwner.address);
-        const record = blockchain.openContract(HealthDataRecord.fromAddress(recordAddress));
-        const newEncryptedPeriodDateStart = 'changedDateStart';
-        const newEncryptedPeriodDateEnd = 'changedDateEnd';
-        const updatedResult = await account.send(
-            deployerAddress,
-            { value: toNano('0.02') },
-            {
-                $$type: 'ChangeHealthData',
-                accessedAddress: mockAccountOwner.address,
-                seqno: 1n,
-                encryptedPeriodDateStart: newEncryptedPeriodDateStart,
-                encryptedPeriodDateEnd: newEncryptedPeriodDateEnd,
-            },
-        );
-        expect(updatedResult.transactions).toHaveTransaction({
-            from: account.address,
-            to: recordAddress,
-            success: true,
-        });
-        const inactiveRecordState = await record.getHealthDataState();
-        expect(inactiveRecordState.encryptedPeriodDateStart).toEqual(newEncryptedPeriodDateStart);
-        expect(inactiveRecordState.encryptedPeriodDateEnd).toEqual(newEncryptedPeriodDateEnd);
-    });
-    it('should inactivate health data', async () => {
-        const deployerAddress = deployer.getSender();
-        const encryptedPeriodDateStart = 'dateStart';
-        const encryptedPeriodDateEnd = 'dateEnd';
         await account.send(
             deployerAddress,
-            { value: toNano('0.02') },
+            { value: toNano('0.5') },
             {
-                $$type: 'AddHealthData',
+                $$type: 'UpdateMonthPeriodData',
                 accessedAddress: mockAccountOwner.address,
-                encryptedPeriodDateStart: encryptedPeriodDateStart,
-                encryptedPeriodDateEnd: encryptedPeriodDateEnd,
+                monthIndex: monthIndex,
+                toAdd: toAddStep2,
+                toDelete: toDeleteStep2,
             },
         );
-        const recordAddress = await account.getHealthDataAddress(1n, mockAccountOwner.address);
-        const record = blockchain.openContract(HealthDataRecord.fromAddress(recordAddress));
-        const inactiveResult = await account.send(
-            deployerAddress,
-            { value: toNano('0.02') },
-            {
-                $$type: 'SetInactiveRecord',
-                accessedAddress: mockAccountOwner.address,
-                seqno: 1n,
-            },
-        );
-        expect(inactiveResult.transactions).toHaveTransaction({
-            from: account.address,
-            to: recordAddress,
-            success: true,
-        });
-        const inactiveRecordState = await record.getHealthDataState();
-        expect(inactiveRecordState.recordIsActive).toEqual(false);
+        const filledMonthsCount = await account.getNumFilledMonths();
+        expect(filledMonthsCount).toEqual(1n);
+        const monthPeriodAddress = await account.getMonthPeriodDataAddress(1n, mockAccountOwner.address);
+        const monthPeriod = blockchain.openContract(MonthPeriodData.fromAddress(monthPeriodAddress));
+        const monthPeriodDataCount = await monthPeriod.getDataLength();
+        const data = await monthPeriod.getData();
+        expect(monthPeriodDataCount).toEqual(BigInt(expectedMap.size));
+        for (let i = 0; i < expectedMap.size; i++) {
+            const expectedItem = expectedMap.get(BigInt(i));
+            const item = data.get(BigInt(i));
+            expect(item?.date).toEqual(expectedItem?.date);
+        }
     });
+    it('should add period data items with different months to different contracts', async () => {
+        const deployerAddress = deployer.getSender();
+        /// Set data
+        const monthIndex1 = 1n;
+        const monthIndex2 = 2n;
+        const toAdd1 = Dictionary.empty<bigint, PeriodDataItem>();
+        toAdd1.set(
+            1n,
+            {
+                $$type: 'PeriodDataItem',
+                date: '2021-01-01',
+            }
+        );
+        const toDelete1 = Dictionary.empty<bigint, PeriodDataItem>();
+
+        const toAdd2 = Dictionary.empty<bigint, PeriodDataItem>();
+        toAdd2.set(
+            1n,
+            {
+                $$type: 'PeriodDataItem',
+                date: '2021-02-01',
+            }
+        );
+        const toDelete2 = Dictionary.empty<bigint, PeriodDataItem>();
+        const expectedMap1 = Dictionary.empty<bigint, PeriodDataItem>();
+        const expectedMap2 = Dictionary.empty<bigint, PeriodDataItem>();
+        expectedMap1.set(1n, toAdd1.get(1n)!);
+        expectedMap2.set(1n, toAdd2.get(1n)!);
+
+        /// Run logic
+        await account.send(
+            deployerAddress,
+            { value: toNano('0.5') },
+            {
+                $$type: 'UpdateMonthPeriodData',
+                accessedAddress: mockAccountOwner.address,
+                monthIndex: monthIndex1,
+                toAdd: toAdd1,
+                toDelete: toDelete1,
+            },
+        );
+        await account.send(
+            deployerAddress,
+            { value: toNano('0.5') },
+            {
+                $$type: 'UpdateMonthPeriodData',
+                accessedAddress: mockAccountOwner.address,
+                monthIndex: monthIndex2,
+                toAdd: toAdd2,
+                toDelete: toDelete2,
+            },
+        );
+        const filledMonthsCount = await account.getNumFilledMonths();
+        expect(filledMonthsCount).toEqual(2n);
+        const monthPeriodAddress1 = await account.getMonthPeriodDataAddress(1n, mockAccountOwner.address);
+        const monthPeriod1 = blockchain.openContract(MonthPeriodData.fromAddress(monthPeriodAddress1));
+        const monthPeriodDataCount1 = await monthPeriod1.getDataLength();
+        const data1 = await monthPeriod1.getData();
+        expect(monthPeriodDataCount1).toEqual(BigInt(expectedMap1.size));
+        expect(data1.get(BigInt(1))?.date).toEqual(expectedMap1.get(BigInt(1))?.date);
+
+        const monthPeriodAddress2 = await account.getMonthPeriodDataAddress(2n, mockAccountOwner.address);
+        const monthPeriod2 = blockchain.openContract(MonthPeriodData.fromAddress(monthPeriodAddress2));
+        const monthPeriodDataCount2 = await monthPeriod2.getDataLength();
+        const data2 = await monthPeriod2.getData();
+        expect(monthPeriodDataCount2).toEqual(BigInt(expectedMap2.size));
+        expect(data2.get(BigInt(1))?.date).toEqual(expectedMap2.get(BigInt(1))?.date);
+
+    });
+
 });

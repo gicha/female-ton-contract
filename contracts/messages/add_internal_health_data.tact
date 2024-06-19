@@ -1,6 +1,0 @@
-message AddInternalHealthData {
-    /// encrypted period date start
-    encryptedPeriodDateStart: String = "";
-    /// encrypted period date end
-    encryptedPeriodDateEnd: String = "";
-}
